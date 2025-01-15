@@ -18,6 +18,7 @@ package br.com.kaioferreira.todolist.adapters;
  * porém o acesso é por pacote e por herança.
  */
 
+import at.favre.lib.crypto.bcrypt.BCrypt;
 import br.com.kaioferreira.todolist.domain.user.User;
 import br.com.kaioferreira.todolist.domain.user.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,10 @@ public class UserController {
         if (userFound != null){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Usuário já existe");
         }
+
+        var hashedPassword = BCrypt.withDefaults().hashToString(12, user.getPassword().toCharArray());
+        user.setPassword(hashedPassword);
+
         var userCreated = this.userRepository.save(user);
         return ResponseEntity.status(HttpStatus.CREATED).body(user);
     }
