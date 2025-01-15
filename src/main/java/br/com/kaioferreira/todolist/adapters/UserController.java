@@ -21,6 +21,8 @@ package br.com.kaioferreira.todolist.adapters;
 import br.com.kaioferreira.todolist.domain.user.User;
 import br.com.kaioferreira.todolist.domain.user.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,9 +37,14 @@ public class UserController {
     private UserRepository userRepository;
 
     @GetMapping("/register")
-    public User register(@RequestBody User user) {
+    public ResponseEntity register(@RequestBody User user) {
+        var userFound =this.userRepository.findByUsername(user.getUsername());
+
+        if (userFound != null){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Usuário já existe");
+        }
         var userCreated = this.userRepository.save(user);
-        return userCreated;
+        return ResponseEntity.status(HttpStatus.CREATED).body(user);
     }
 }
 
