@@ -1,12 +1,17 @@
 package br.com.kaioferreira.todolist.adapters.http.task;
 
+import br.com.kaioferreira.todolist.application.utils.Utils;
 import br.com.kaioferreira.todolist.domain.task.Task;
 import br.com.kaioferreira.todolist.domain.task.TaskRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping ("/task")
@@ -16,8 +21,42 @@ public class taskController {
     private TaskRepository taskRepository;
 
     @PostMapping("/")
-    public Task create(@RequestBody Task task) {
+    public ResponseEntity create(@RequestBody Task task, HttpServletRequest request) {
+
+        var idUser = request.getAttribute("IdUser");
+        task.setIdUser((UUID) idUser);
+
+        var currentDate = LocalDateTime.now();
+        if(currentDate.isAfter(task.getStartAt()) || currentDate.isAfter(task.getEndAt())){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("A data de início / data de término deve ser maior que a atual. ");
+        }
+        if(task.getStartAt().isAfter(task.getEndAt())){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("A data de início deve ser menor que data de término.");
+        }
+
         var taskCreated = this.taskRepository.save(task);
-        return task;
+        return ResponseEntity.status(HttpStatus.OK).body(task);
     }
+
+    @GetMapping("/")
+    public List<Task> findByIdUser(HttpServletRequest request){
+        var idUser = request.getAttribute("IdUser");
+        var tasksList = this.taskRepository.findByIdUser((UUID) idUser);
+        return tasksList;
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity update(@RequestBody Task task, @PathVariable UUID id, HttpServletRequest request) {
+
+        var taskById = this.taskRepository.findById(id).orElse(null);
+        if (taskById == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Task not found");
+        }
+
+        Utils.copyNonNullProperties(task, taskById); // Atualiza apenas os campos não nulos
+        this.taskRepository.save(taskById); // Salva o objeto atualizado
+
+        return ResponseEntity.status(HttpStatus.OK).body(taskById); // Retorna o objeto atualizado
+    }
+
 }
